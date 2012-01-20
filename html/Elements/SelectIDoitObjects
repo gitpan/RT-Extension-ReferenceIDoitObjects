@@ -1,0 +1,208 @@
+%# RT::Extension::ReferenceIDoitObjects
+%#
+%# Copyright 2011 synetics GmbH, http://i-doit.org/
+%#
+%# This program is free software; you can redistribute it and/or modify it under
+%# the same terms as Perl itself.
+%#
+%# Request Tracker (RT) is Copyright Best Practical Solutions, LLC.
+
+<div id="i-doit-objectbrowser" style="position: relative; min-width: 400px;">
+    <div id="data-store" style="display:none;"></div>
+	<div id="i-doit-browser-notice" class="ui-corner-all"><% loc('Please select an i-doit mandator.') %></div>
+    <div id="i-doit-objectbrowser-content" style="display:none;">
+        <ul>
+            <li><a href="#tab-objectview"><% loc('Object view') %></a></li>
+            <li><a href="#tab-treeview"><% loc('Tree view') %></a></li>
+            <li><a href="#tab-itemview"><% loc('Selected objects') %></a></li>
+        </ul>
+
+        <a href="<% RT->Config->Get('IDoitURL') %>" title="<% loc('Go to i-doit') %>" target="_blank">
+			<img src="<% RT->Config->Get('WebPath') %>/NoAuth/images/i-doit.png" alt="i-doit" style="position: absolute; top: 5px; right: 8px; height: 28px;" border="0" />
+		</a>
+
+        <img id="loading-screen" src="<% RT->Config->Get('WebPath') %>/NoAuth/images/jquery_ui/ui-anim_basic_16x16.gif" alt="<% loc('Loading...') %>" height="16" width="16" style="position: absolute; opacity: 0; z-index: 100; right: 80px; top: 12px;" border="0" />
+
+        <div id="tab-objectview">
+            <% loc('Object type') %>: <select class="object-type"></select><br />
+            <table class="object-table" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th width="5%"></th>
+                        <th width="15%"><% loc('ID') %></th>
+                        <th width="70%"><% loc('Name') %></th>
+                        <th width="10%"><% loc('Link') %></th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+        <div id="tab-treeview">
+            <div class="workplaces"></div>
+            <span id="requestor-reload"><% loc('Refresh') %></span>
+        </div>
+        <div id="tab-itemview">
+            <table class="object-table" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th width="10%"></th>
+                        <th width="10%"><% loc('ID') %></th>
+                        <th width="40%"><% loc('Name') %></th>
+                        <th width="30%"><% loc('Type') %></th>
+                        <th width="10%"><% loc('Link') %></th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+	// Global variables (without "var").
+    idoit_url = '<% $IDoitURL %>';
+
+	api_url = '<% $IDoitAPI %>';
+	api_lang = '<% $Language %>';
+	api_user = '<% $IDoitUser %>';
+	api_password = '<% $IDoitPassword %>';
+	api_mandator = 0;
+	api_default_view = '<% $IDoitView %>';
+
+	show_custom_fields = <% $IDoitShowCustomFields %>;
+
+	browser_preselection_field = 'textarea[name="<% $IDoitObjects %>"]';
+	browser_mandator_field = 'select[name="<% $IDoitMandator %>"]';
+
+	current_objectview_data = {};
+	current_treeview_data = {};
+
+	initialized = false;
+</script>
+
+<script type="text/javascript" src="<% RT->Config->Get('WebPath') %>/NoAuth/js/i-doit_object_browser.js"></script>
+
+<script type="text/javascript">
+	(function($) {
+		// Hide custom fields:
+		if (show_custom_fields == 0) {
+			browser_preselection_field.parent().parent().hide();
+			browser_mandator_field.parent().parent().hide();
+		}
+
+		// Initialize our data object.
+		$('#data-store').data();
+
+		// Initialize our tabs.
+		$('#i-doit-objectbrowser-content').tabs({selected: api_default_view});
+
+		// Start the browser.
+		window.init_browser();
+	})(jQuery);
+</script>
+
+<%INIT>
+use Switch;
+
+$IDoitURL = RT->Config->Get('IDoitURL');
+unless($IDoitURL) {
+    my $msg = loc('URL for i-doit is not configured.');
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+
+$IDoitAPI = RT->Config->Get('IDoitAPI');
+unless($IDoitAPI) {
+    my $msg = loc("URL for i-doit's API is not configured.");
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+
+$IDoitUser = RT->Config->Get('IDoitUser');
+unless($IDoitUser) {
+    my $msg = loc("User for i-doit's API is not configured.");
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+
+$IDoitPassword = RT->Config->Get('IDoitPassword');
+unless($IDoitPassword) {
+    my $msg = loc("Password for i-doit's API is not configured.");
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+
+my $ticketID = '';
+if ($TicketObj) {
+    $ticketID = $TicketObj->Id;
+}
+
+my $cfMandator = 'i-doit mandator';
+my $cf = RT::CustomField->new($RT::SystemUser);
+$cf->LoadByNameAndQueue(Name => $cfMandator, Queue => '0');
+unless($cf->id) {
+    my $msg = sprintf(loc("Custom field %s does not exist."), $cfMandator);
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+$IDoitMandator = 'Object-RT::Ticket-' . $ticketID . '-CustomField-' . $cf->id . '-Values';
+
+my $cfObjects = 'i-doit objects';
+$cf = RT::CustomField->new($RT::SystemUser);
+$cf->LoadByNameAndQueue(Name => $cfObjects, Queue => '0');
+unless($cf->id) {
+    my $msg = sprintf(loc("Custom field %s does not exist."), $cfObjects);
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+$IDoitObjects = 'Object-RT::Ticket-' . $ticketID . '-CustomField-' . $cf->id . '-Values';
+
+$IDoitDefaultView = RT->Config->Get('IDoitDefaultView');
+unless($IDoitDefaultView) {
+    my $msg = loc("Default view for referenced i-doit objects is not configured.");
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+switch ($IDoitDefaultView) {
+    case 'object' { $IDoitView = 0; }
+    case 'tree' { $IDoitView = 1; }
+    case 'item' { $IDoitView = 2; }
+}
+
+$IDoitShowCustomFields = RT->Config->Get('IDoitShowCustomFields');
+if ($IDoitShowCustomFields < 0 || $IDoitShowCustomFields > 1) {
+    my $msg = loc('Configuration option to show/hide i-doit related custom fields is not set.');
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+
+$Language = substr($session{CurrentUser}->UserObj->Lang, 0, 2);
+</%INIT>
+
+<%ARGS>
+$skip_create => undef
+$results => undef
+
+$TicketObj => undef
+$Language => undef
+
+$IDoitURL => undef
+$IDoitAPI => undef
+$IDoitUser => undef
+$IDoitPassword => undef
+$IDoitMandator => undef
+$IDoitObjects => undef
+$IDoitDefaultView => undef
+$IDoitView => undef
+$IDoitShowCustomFields => undef
+</%ARGS>

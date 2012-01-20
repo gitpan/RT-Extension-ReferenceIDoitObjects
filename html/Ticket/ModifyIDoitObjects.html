@@ -1,0 +1,40 @@
+%# RT::Extension::ReferenceIDoitObjects
+%#
+%# Copyright 2011 synetics GmbH, http://i-doit.org/
+%#
+%# This program is free software; you can redistribute it and/or modify it under
+%# the same terms as Perl itself.
+%#
+%# Request Tracker (RT) is Copyright Best Practical Solutions, LLC.
+
+<& /Elements/Header, Title => loc('Modify referenced i-doit objects for ticket #[_1]', $TicketObj->Id) &>
+<& /Elements/Tabs &>
+
+% $m->callback(CallbackName => 'BeforeActionList', Actions => \@results, ARGSRef => \%ARGS, Ticket => $TicketObj);
+
+<& /Elements/ListActions, actions => \@results &>
+
+<form method="post" action="ModifyIDoitObjects.html">
+    <input type="hidden" class="hidden" name="id" value="<% $TicketObj->Id %>" />
+    <input type="hidden" id="Requestors" name="Requestory" value="<% $TicketObj->RequestorAddresses %>" />
+    <&| /Widgets/TitleBox, title => loc('These fields are needed to modify referenced i-doit objects.'), class=>'ticket-info-basics' &>
+        <& Elements/EditCustomFields, TicketObj => $TicketObj &>
+    </&>
+    <br />
+    <&| /Widgets/TitleBox,title => loc('Modify referenced i-doit objects for ticket #[_1]', $TicketObj->Id), class=> 'ticket-info-basic' &>
+        <& Elements/EditIDoitObjects, TicketObj => $TicketObj &>
+    </&>
+    <& /Elements/Submit, Name => 'SubmitTicket', Label => loc('Save Changes') &>  
+</form>
+
+<%INIT>
+my @results;
+my $TicketObj = LoadTicket($id);
+$m->callback( TicketObj => $TicketObj, ARGSRef => \%ARGS );
+push @results, ProcessObjectCustomFieldUpdates(Object => $TicketObj, ARGSRef => \%ARGS);
+$TicketObj->ApplyTransactionBatch;
+</%INIT>
+
+<%ARGS>
+$id => undef
+</%ARGS>

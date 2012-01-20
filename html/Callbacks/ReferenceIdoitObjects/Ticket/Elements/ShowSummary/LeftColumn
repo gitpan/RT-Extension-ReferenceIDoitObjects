@@ -1,0 +1,28 @@
+%# RT::Extension::ReferenceIDoitObjects
+%#
+%# Copyright 2011 synetics GmbH, http://i-doit.org/
+%#
+%# This program is free software; you can redistribute it and/or modify it under
+%# the same terms as Perl itself.
+%#
+%# Request Tracker (RT) is Copyright Best Practical Solutions, LLC.
+
+<&| /Widgets/TitleBox,
+    title => loc('Referenced i-doit objects'),
+    (($can_modify || $can_modify_idoitobject) ? (title_href => RT->Config->Get('WebPath')."/Ticket/ModifyIDoitObjects.html?id=".$Ticket->Id) : ()),
+    class => 'ticket-info-basics'
+&>
+<& /Ticket/Elements/ShowIDoitObjects &>
+</&>
+
+<%INIT>
+my $can_modify = $Ticket->CurrentUserHasRight('ModifyTicket');
+my $can_modify_idoitobject =
+    $Ticket->CurrentUserHasRight('OwnTicket') ||
+    $Ticket->CurrentUserHasRight('TakeTicket') ||
+    $Ticket->CurrentUserHasRight('StealTicket');
+</%INIT>
+
+<%ARGS>
+$Ticket => undef
+</%ARGS>

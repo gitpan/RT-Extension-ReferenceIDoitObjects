@@ -1,0 +1,192 @@
+%# RT::Extension::ReferenceIDoitObjects
+%#
+%# Copyright 2011 synetics GmbH, http://i-doit.org/
+%#
+%# This program is free software; you can redistribute it and/or modify it under
+%# the same terms as Perl itself.
+%#
+%# Request Tracker (RT) is Copyright Best Practical Solutions, LLC.
+
+<div id="i-doit-objectbrowser" style="position: relative; min-width: 400px;">
+    <div id="data-store" style="display:none;"></div>
+	<div id="i-doit-browser-notice" class="ui-corner-all"></div>
+    <div id="i-doit-content" style="display:none;">
+		<table class="object-table" style="width:100%;">
+			<thead>
+				<tr>
+					<th width="10%"><% loc('ID') %></th>
+					<th width="40%"><% loc('Name') %></th>
+					<th width="40%"><% loc('Type') %></th>
+					<th width="10%"><% loc('Link') %></th>
+				</tr>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+    </div>
+</div>
+
+<script type="text/javascript">
+	// Global variables (without "var").
+    idoit_url = '<% $IDoitURL %>';
+
+	api_url = '<% $IDoitAPI %>';
+	api_lang = '<% $Language %>';
+	api_user = '<% $IDoitUser %>';
+	api_password = '<% $IDoitPassword %>';
+	api_mandator = 0;
+
+	show_custom_fields = <% $IDoitShowCustomFields %>;
+
+	browser_preselection_field = 'tr#<% $IDoitObjects %>';
+	browser_mandator_field = 'tr#<% $IDoitMandator %>';
+	
+	preselection = [];
+</script>
+
+<script type="text/javascript" src="<% RT->Config->Get('WebPath') %>/NoAuth/js/i-doit_object_browser.js"></script>
+
+<script type="text/javascript">
+	(function($) {
+		$(document).ready(function() {
+			browser_preselection_field = $(browser_preselection_field);
+			browser_mandator_field = $(browser_mandator_field);
+			
+			list = $('#i-doit-content table.object-table').dataTable({
+				"bJQueryUI": true,
+				"bAutoWidth": false,
+				"bPaginate": false,
+				"bLengthChange": false,
+				"bSort": false,
+				"oLanguage": datatable_lang
+			});
+			
+            if (browser_preselection_field.has('ul li').length) {
+              $.each(browser_preselection_field.find('ul li'), function(i, e) {
+                preselection.push($(e).text().replace(/[\n\s]/g, ''));
+              });
+            } else {
+              preselection.push(browser_preselection_field.find('td.value').text().replace(/[\n\s]/g, ''));
+            }
+			
+			api_mandator = browser_mandator_field.find('td.value').text().replace(/[\n\s]/g, '');
+
+			data = {
+				"method":"cmdb.objects",
+				"params":{
+					"session":{
+						"username":api_user,
+						"password":api_password,
+						"language":api_lang,
+						"mandator":api_mandator},
+					"filter":{
+						"ids":preselection}},
+				"id":"1",
+				"jsonrpc":"2.0"};
+
+			idoit_ajax(data, function(response) {
+					if (response.error == null) {
+						$('#i-doit-browser-notice').css({display: 'none'});
+						$('#i-doit-content').css({display: 'block'});
+						
+						$.each(response.result, function(i, e) {
+							var link = '<a href="' + idoit_url + '?objID=' + e.id + '" target="_blank"><% loc("Go to i-doit") %></a>';
+							list.fnAddData([e.id, e.title, e.type_title, link]);
+						});
+					} else {
+						window.error_notice('<% loc("Error while loading pre-selecting objects") %>');
+					}
+				});
+
+			// Hide custom fields:
+			if (show_custom_fields == 0) {
+				browser_preselection_field.hide();
+				browser_mandator_field.hide();
+			}
+		});
+	})(jQuery);
+</script>
+
+<%INIT>
+use Switch;
+
+$IDoitURL = RT->Config->Get('IDoitURL');
+unless($IDoitURL) {
+    my $msg = loc('URL for i-doit is not configured.');
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+
+$IDoitAPI = RT->Config->Get('IDoitAPI');
+unless($IDoitAPI) {
+    my $msg = loc("URL for i-doit's API is not configured.");
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+
+$IDoitUser = RT->Config->Get('IDoitUser');
+unless($IDoitUser) {
+    my $msg = loc("User for i-doit's API is not configured.");
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+
+$IDoitPassword = RT->Config->Get('IDoitPassword');
+unless($IDoitPassword) {
+    my $msg = loc("Password for i-doit's API is not configured.");
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+
+my $cfMandator = 'i-doit mandator';
+my $cf = RT::CustomField->new($RT::SystemUser);
+$cf->LoadByNameAndQueue(Name => $cfMandator, Queue => '0');
+unless($cf->id) {
+    my $msg = sprintf(loc("Custom field %s does not exist."), $cfMandator);
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+$IDoitMandator = 'CF-' . $cf->id . '-ShowRow';
+
+my $cfObjects = 'i-doit objects';
+$cf = RT::CustomField->new($RT::SystemUser);
+$cf->LoadByNameAndQueue(Name => $cfObjects, Queue => '0');
+unless($cf->id) {
+    my $msg = sprintf(loc("Custom field %s does not exist."), $cfObjects);
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+$IDoitObjects = 'CF-' . $cf->id . '-ShowRow';
+
+$IDoitShowCustomFields = RT->Config->Get('IDoitShowCustomFields');
+if ($IDoitShowCustomFields < 0 || $IDoitShowCustomFields > 1) {
+    my $msg = loc('Configuration option to show/hide i-doit related custom fields is not set.');
+    RT::Logger->error($msg);
+    $$skip_create = 1;
+    push @{$results}, $msg;
+}
+
+$Language = substr($session{CurrentUser}->UserObj->Lang, 0, 2);
+</%INIT>
+
+<%ARGS>
+$skip_create => undef
+$results => undef
+
+$Language => undef
+
+$IDoitURL => undef
+$IDoitAPI => undef
+$IDoitUser => undef
+$IDoitPassword => undef
+$IDoitMandator => undef
+$IDoitObjects => undef
+$IDoitView => undef
+$IDoitShowCustomFields => undef
+</%ARGS>

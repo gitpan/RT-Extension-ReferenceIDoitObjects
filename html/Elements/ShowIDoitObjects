@@ -9,7 +9,7 @@
 
 <div id="i-doit-objectbrowser" style="position: relative; min-width: 400px;">
     <div id="data-store" style="display:none;"></div>
-	<div id="i-doit-browser-notice" class="ui-corner-all"></div>
+	<div id="i-doit-browser-notice" class="ui-corner-all" style="display: none;"></div>
     <div id="i-doit-content" style="display:none;">
 		<table class="object-table" style="width:100%;">
 			<thead>
@@ -34,14 +34,14 @@
 	api_lang = '<% $Language %>';
 	api_user = '<% $IDoitUser %>';
 	api_password = '<% $IDoitPassword %>';
-	api_mandator = 0;
+	api_mandator = '<% $IDoitMandator %>';
 
 	show_custom_fields = <% $IDoitShowCustomFields %>;
 
-	browser_preselection_field = 'tr#<% $IDoitObjects %>';
-	browser_mandator_field = 'tr#<% $IDoitMandator %>';
-	
-	preselection = [];
+	browser_preselection_field = 'tr#<% $IDoitObjectsField %>';
+	browser_mandator_field = 'tr#<% $IDoitMandatorField %>';
+
+	preselection = [<% $IDoitObjects %>];
 </script>
 
 <script type="text/javascript" src="<% RT->Config->Get('WebPath') %>/NoAuth/js/i-doit_object_browser.js"></script>
@@ -51,7 +51,7 @@
 		$(document).ready(function() {
 			browser_preselection_field = $(browser_preselection_field);
 			browser_mandator_field = $(browser_mandator_field);
-			
+
 			list = $('#i-doit-content table.object-table').dataTable({
 				"bJQueryUI": true,
 				"bAutoWidth": false,
@@ -60,43 +60,39 @@
 				"bSort": false,
 				"oLanguage": datatable_lang
 			});
-			
-            if (browser_preselection_field.has('ul li').length) {
-              $.each(browser_preselection_field.find('ul li'), function(i, e) {
-                preselection.push($(e).text().replace(/[\n\s]/g, ''));
-              });
+
+            if (isNaN(parseInt(api_mandator)) || api_mandator <= 0) {
+                window.error_notice('<% loc("Please select an i-doit mandator.") %>');
+            } else if (preselection.length == 0) {
+                window.error_notice('<% loc("No objects has been selected yet.") %>');
             } else {
-              preselection.push(browser_preselection_field.find('td.value').text().replace(/[\n\s]/g, ''));
+                data = {
+                    "method":"cmdb.objects",
+                    "params":{
+                        "session":{
+                            "username":api_user,
+                            "password":api_password,
+                            "language":api_lang,
+                            "mandator":api_mandator},
+                        "filter":{
+                            "ids":preselection}},
+                    "id":"1",
+                    "jsonrpc":"2.0"};
+
+                idoit_ajax(data, function(response) {
+                        if (response.error == null) {
+                            $('#i-doit-browser-notice').css({display: 'none'});
+                            $('#i-doit-content').css({display: 'block'});
+
+                            $.each(response.result, function(i, e) {
+                                var link = '<a href="' + idoit_url + '?objID=' + e.id + '" title="<% loc('Go to i-doit') %>" target="_blank">&raquo; i-doit</a>';
+                                list.fnAddData([e.id, e.title, e.type_title, link]);
+                            });
+                        } else {
+                            window.error_notice('<% loc("Error while loading pre-selecting objects") %>');
+                        }
+                    });
             }
-			
-			api_mandator = browser_mandator_field.find('td.value').text().replace(/[\n\s]/g, '');
-
-			data = {
-				"method":"cmdb.objects",
-				"params":{
-					"session":{
-						"username":api_user,
-						"password":api_password,
-						"language":api_lang,
-						"mandator":api_mandator},
-					"filter":{
-						"ids":preselection}},
-				"id":"1",
-				"jsonrpc":"2.0"};
-
-			idoit_ajax(data, function(response) {
-					if (response.error == null) {
-						$('#i-doit-browser-notice').css({display: 'none'});
-						$('#i-doit-content').css({display: 'block'});
-						
-						$.each(response.result, function(i, e) {
-							var link = '<a href="' + idoit_url + '?objID=' + e.id + '" target="_blank"><% loc("Go to i-doit") %></a>';
-							list.fnAddData([e.id, e.title, e.type_title, link]);
-						});
-					} else {
-						window.error_notice('<% loc("Error while loading pre-selecting objects") %>');
-					}
-				});
 
 			// Hide custom fields:
 			if (show_custom_fields == 0) {
@@ -143,6 +139,19 @@ unless($IDoitPassword) {
 }
 
 my $cfMandator = 'i-doit mandator';
+
+$IDoitMandator = $ticket->FirstCustomFieldValue($cfMandator);
+unless($IDoitMandator) {
+    $IDoitMandator = RT->Config->Get('IDoitDefaultMandator');
+
+    unless ($IDoitMandator) {
+        my $msg = loc('Default mandator is not configured.');
+        RT::Logger->error($msg);
+        $$skip_create = 1;
+        push @{$results}, $msg;
+    }
+}
+
 my $cf = RT::CustomField->new($RT::SystemUser);
 $cf->LoadByNameAndQueue(Name => $cfMandator, Queue => '0');
 unless($cf->id) {
@@ -151,9 +160,18 @@ unless($cf->id) {
     $$skip_create = 1;
     push @{$results}, $msg;
 }
-$IDoitMandator = 'CF-' . $cf->id . '-ShowRow';
+$IDoitMandatorField = 'CF-' . $cf->id . '-ShowRow';
 
 my $cfObjects = 'i-doit objects';
+
+my $IDoitObjectValues = $ticket->CustomFieldValues($cfObjects);
+my @IDoitObjects;
+while (my $IDoitObjectValue = $IDoitObjectValues->Next) {
+  push(@IDoitObjects, $IDoitObjectValue->Content);
+}
+ 
+$IDoitObjects = join(', ', @IDoitObjects);
+
 $cf = RT::CustomField->new($RT::SystemUser);
 $cf->LoadByNameAndQueue(Name => $cfObjects, Queue => '0');
 unless($cf->id) {
@@ -162,7 +180,7 @@ unless($cf->id) {
     $$skip_create = 1;
     push @{$results}, $msg;
 }
-$IDoitObjects = 'CF-' . $cf->id . '-ShowRow';
+$IDoitObjectsField = 'CF-' . $cf->id . '-ShowRow';
 
 $IDoitShowCustomFields = RT->Config->Get('IDoitShowCustomFields');
 if ($IDoitShowCustomFields < 0 || $IDoitShowCustomFields > 1) {
@@ -179,6 +197,8 @@ $Language = substr($session{CurrentUser}->UserObj->Lang, 0, 2);
 $skip_create => undef
 $results => undef
 
+$ticket => undef
+
 $Language => undef
 
 $IDoitURL => undef
@@ -186,7 +206,9 @@ $IDoitAPI => undef
 $IDoitUser => undef
 $IDoitPassword => undef
 $IDoitMandator => undef
+$IDoitMandatorField => undef
 $IDoitObjects => undef
+$IDoitObjectsField => undef
 $IDoitView => undef
 $IDoitShowCustomFields => undef
 </%ARGS>

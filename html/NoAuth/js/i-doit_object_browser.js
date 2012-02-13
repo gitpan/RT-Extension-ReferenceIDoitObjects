@@ -55,8 +55,6 @@
      * @author  Leonard Fischer <lfischer@synetics.de>
      */
     window.init_browser = function() {
-		api_mandator = browser_mandator_field.val();
-
 		// Here we get our preselection data and cast the ID's to integer.
 		var data = {};
 
@@ -300,6 +298,7 @@
 	 */
 	browser_mandator_field.live('change', function() {
 		window.remove_all_objects();
+        api_mandator = browser_mandator_field.val();
 		window.init_browser();
 	});
 
@@ -316,15 +315,17 @@
 			$('#tab-treeview div').html('<% loc("Given requestor(s) could not be found in i-doit.") %>');
 		}
 		
+		var workplaces = $('#tab-treeview div.workplaces');
+		
         // We iterate through the first level (email-addresses).
         $.each(current_treeview_data, function(i, e) {
-            $('#tab-treeview div.workplaces').append('<a href="' + idoit_url + '?objID=' + i + '" target="_blank" style="font-weight:bold;">' + e.data.title + ' &lt;' + e.data.email + '&gt;</a><br />');
+            workplaces.append('<a href="' + idoit_url + '?objID=' + i + '" target="_blank" style="font-weight:bold;">' + e.data.title + ' &lt;' + e.data.email + '&gt;</a><br />');
 
 			if (e.children != false) {
 				window.render_treeview_recursion(e.children, 1);
 			}
 
-			$('#tab-treeview div.workplaces').append('<br />');
+            workplaces.append('<br />');
         });
     };
 
@@ -420,27 +421,25 @@
      * @author  Leonard Fischer <lfischer@synetics.de>
      */
     window.render_objectview = function() {
+        var store = $('#data-store'),
+            entities = [];
         objectview_table.fnClearTable();
         $.each(current_objectview_data, function(i, e) {
-            if (e.status == 2) {
-                var check,
-					selected = false,
-					title,
-					id,
-					link;
+            var check,
+                selected = false,
+                link;
 
-                if (typeof $('#data-store').data(e.id) != 'undefined') {
-                    selected = true;
-                }
-
-                check = '<input type="checkbox" value="' + e.id + '" name="i-doit-objectbrowser-obj[]" ' + ((selected) ? 'checked="checked"' : '') + ' />';
-                id = e.id;
-				title = e.title;
-                link = '<a href="' + idoit_url + '?objID=' + e.id + '" target="_blank"><% loc("Go to i-doit") %></a>';
-				
-                objectview_table.fnAddData([check, id, title, link]);
+            if (typeof store.data(e.id) != 'undefined') {
+                selected = true;
             }
+
+            check = '<input type="checkbox" value="' + e.id + '" name="i-doit-objectbrowser-obj[]" ' + ((selected) ? 'checked="checked"' : '') + ' />';
+            link = '<a href="' + idoit_url + '?objID=' + e.id + '" target="_blank" title="<% loc('Go to i-doit') %>">&raquo; i-doit</a>';
+
+            entities.push([check, e.id, e.title, link]);
         });
+
+        objectview_table.fnAddData(entities);
     };
 
 
@@ -500,16 +499,19 @@
      * @author  Leonard Fischer <lfischer@synetics.de>
      */
     window.render_selected_items = function() {
-        var data_array = [];
+        var data_array = [],
+            entities = [];
 
         itemview_table.fnClearTable();
-        $.each($('#data-store').data(), function(i, e) {
-			var title = e.name,
-            link = '<a href="' + idoit_url + '?objID=' + i + '"><% loc("Go to i-doit") %></a>';
+        var data = $('#data-store').data();
+        $.each(data, function(i, e) {
+            var link = '<a href="' + idoit_url + '?objID=' + i + '" title="<% loc('Go to i-doit') %>">&raquo; i-doit</a>';
 
-			itemview_table.fnAddData(['<span class="i-doit-objectbrowser-remover" onclick="window.remove_object(' + i + ')"><% loc("Delete") %></span>', i, title, e.type, link]);
+            entities.push(['<span class="i-doit-objectbrowser-remover" onclick="window.remove_object(' + i + ')"><% loc("Delete") %></span>', i, e.name, e.type, link]);
             data_array.push(i);
         });
+
+        itemview_table.fnAddData(entities);
 
         browser_preselection_field.val(data_array.join("\n"));
     };
@@ -541,13 +543,8 @@
 	 * @author  Leonard Fischer <lfischer@synetics.de>
 	 */
     window.error_notice = function(msg) {
-		var notice = $('<div></div>').addClass('ui-corner-all').css({background: '#FFB1AD', borderColor: '#FF6D68', color: '#A04341', opacity: 1}).html(msg);
-		
-		$('#i-doit-browser-notice').html('<% loc("Please select an i-doit mandator.") %>').css({display: 'block'});
+		$('#i-doit-browser-notice').html(msg).fadeIn(500);
 		$('#i-doit-objectbrowser-content').css({display: 'none'});
-
-        $('#i-doit-browser-notice').after(notice);
-		notice.show().delay(2000).slideUp(300).delay(300).remove();
     }
 
 

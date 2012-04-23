@@ -20,7 +20,7 @@
 		"sInfoEmpty":    "<% loc('0 to 0 of 0 objects') %>",
 		"sInfoFiltered": "<% loc('(filtered from _MAX_ objects)') %>",
 		"sInfoPostFix":  "",
-		"sSearch":       "<% loc('Search') %>",
+		"sSearch":       "<% loc('Filter') %>",
 		"sUrl":          "",
 		"oPaginate": {
 			"sFirst":    "&laquo;",
@@ -72,7 +72,7 @@
 			"jsonrpc":"2.0"};
 
 		idoit_ajax(data, function(response) {
-			if (response.error == null) {
+			if (response != null && response.error == null) {
 				initialized = true;
 				
 				// We look if the preselection field is filled.

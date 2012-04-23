@@ -25,6 +25,9 @@ msgstr "Ausgewählte Objekte"
 msgid "Go to i-doit"
 msgstr "Gehe zu i-doit"
 
+msgid "Filter"
+msgstr "Filter"
+
 msgid "ID"
 msgstr "ID"
 
@@ -77,7 +80,7 @@ msgid "Error while loading objects by email"
 msgstr "Fehler beim Laden von Objekten anhand von E-Mail-Adressen"
 
 msgid "Error while loading pre-selecting objects"
-msgstr "Fehler beim Vorselektieren von Objekten"
+msgstr "Fehler beim Laden vorselektierter Objekte"
 
 msgid "show installed software"
 msgstr "installierte Software anzeigen"

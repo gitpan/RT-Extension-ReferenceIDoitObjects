@@ -1,5 +1,10 @@
 Revision history for RT-Extension-ReferenceIDoitObjects
 
+0.6     Fri, 27 Apr 2012 11:49:06 +0200
+        Write logbook entries within i-doit when objects are added or removed.
+        Show loading message when initiating the browser.
+        Requires i-doit version 0.9.9-9 or higher.
+
 0.5     Mon, 23 Apr 2012 13:22:37 +0200
         When creating a ticket assign mandator and objects from HTTP GET.
         Bug fixing.

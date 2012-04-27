@@ -1,6 +1,6 @@
 %# RT::Extension::ReferenceIDoitObjects
 %#
-%# Copyright 2011 synetics GmbH, http://i-doit.org/
+%# Copyright 2011-12 synetics GmbH, http://i-doit.org/
 %#
 %# This program is free software; you can redistribute it and/or modify it under
 %# the same terms as Perl itself.
@@ -14,9 +14,10 @@
 
 <& /Elements/ListActions, actions => \@results &>
 
-<form method="post" action="ModifyIDoitObjects.html">
+<form name="ModifyReferencedIDoitObjects" method="post" action="ModifyIDoitObjects.html?id=<% $TicketObj->Id %>">
     <input type="hidden" class="hidden" name="id" value="<% $TicketObj->Id %>" />
     <input type="hidden" id="Requestors" name="Requestory" value="<% $TicketObj->RequestorAddresses %>" />
+    <input type="hidden" id="Subject" name="Subject" value="<% $TicketObj->Subject %>" />
     <&| /Widgets/TitleBox, title => loc('These fields are needed to modify referenced i-doit objects.'), class=>'ticket-info-basics' &>
         <& Elements/EditCustomFields, TicketObj => $TicketObj &>
     </&>
@@ -26,6 +27,15 @@
     </&>
     <& /Elements/Submit, Name => 'SubmitTicket', Label => loc('Save Changes') &>  
 </form>
+
+<script type="text/javascript">
+    (function($) {
+        $('form[name="ModifyReferencedIDoitObjects"]').submit(function() {
+            window.log_changed_objects(true);
+            return true;
+        });
+    })(jQuery);
+</script>
 
 <%INIT>
 my @results;

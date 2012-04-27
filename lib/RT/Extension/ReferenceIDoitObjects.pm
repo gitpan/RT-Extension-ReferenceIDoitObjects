@@ -1,11 +1,19 @@
+# RT::Extension::ReferenceIDoitObjects
+#
+# Copyright 2011-12 synetics GmbH, http://i-doit.org/
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the same terms as Perl itself.
+#
+# Request Tracker (RT) is Copyright Best Practical Solutions, LLC.
+
 package RT::Extension::ReferenceIDoitObjects;
 
 use 5.010;
 use warnings;
 use strict;
 
-our $VERSION = '0.5';
-
+our $VERSION = '0.6';
 
 =head1 NAME
 
@@ -33,7 +41,7 @@ only implemented in the commercial branch>.
 =head1 INSTALLATION
 
 This extension requires RT 4.x or higher and a running installation of i-doit
-0.9.9-8 or higher.
+0.9.9-9 or higher.
 
 To install this extension, run the following commands:
 
@@ -205,7 +213,7 @@ Please report any bugs or feature requests to the L<authors|/"AUTHORS">.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2011 synetics GmbH, E<lt>http://i-doit.org/E<gt>
+Copyright 2011-12 synetics GmbH, E<lt>http://i-doit.org/E<gt>
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
@@ -220,6 +228,4 @@ Request Tracker (RT) is Copyright Best Practical Solutions, LLC.
 
 =cut
 
-
 1;
-

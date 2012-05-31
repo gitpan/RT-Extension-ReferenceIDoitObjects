@@ -13,7 +13,7 @@ use 5.010;
 use warnings;
 use strict;
 
-our $VERSION = '0.6';
+our $VERSION = '0.7';
 
 =head1 NAME
 
@@ -32,7 +32,7 @@ i-doit's multi-mandator functionality.
 i-doit ("I document IT") is a web-based tool to document complex IT
 infrastructures. It provides several modules like a ITIL compliant Configuration
 Management Database (CMDB). More information about i-doit is available under
-L<http://www.i-doit.org/>. It's core is Free and Open Source Software. Visit
+L<http://www.i-doit.org/>. Its core is Free and Open Source Software. Visit
 L<http://www.i-doit.com/> for commercial support and additional services. Please
 note, that B<i-doit's API (which is essential for this extension) is currently
 only implemented in the commercial branch>.
@@ -74,7 +74,7 @@ i-doit has a built-in API based on JSON-RPC. To call this API set its URL:
 
     Set($IDoitDefaultMandator, 1);
 
-    Set($IDoitDefaultView, 'tree'); # 'object', 'tree' or 'item'
+    Set($IDoitDefaultView, 'object'); # 'object', 'tree' or 'item'
 
     Set($IDoitShowCustomFields, 1); # 1 ('yes') or 0 ('no')
 
@@ -202,6 +202,10 @@ L<http://annocpan.org/dist/RT-Extension-ReferenceIDoitObjects>
 =item B<CPAN Ratings>
 
 L<http://cpanratings.perl.org/d/RT-Extension-ReferenceIDoitObjects>
+
+=item B<Repository>
+
+L<https://github.com/bheisig/rt-extension-referenceidoitobjects>
 
 =back
 

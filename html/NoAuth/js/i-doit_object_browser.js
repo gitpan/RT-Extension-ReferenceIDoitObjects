@@ -49,7 +49,6 @@
 			"oLanguage": datatable_lang
 		});
 
-
     /**
      * This event will initialize the browser.
      *
@@ -157,6 +156,12 @@
         }
     });
 
+    /**
+     * Selects all objects from object view.
+     */
+    $('#check_all_objects').click(function() {
+        $('input', objectview_table.fnGetNodes()).attr('checked',this.checked).change();
+    });
 
     /**
      * This event will store the added ID's from the tree-view.
@@ -211,41 +216,42 @@
      * @author  Leonard Fischer <lfischer@synetics.de>
      */
 	window.load_requestor_data = function() {
-		requestors = $('#Requestors').val();
+		raw = $('#Requestors').val();
 
-		if (typeof requestors == 'string') {
-			requestors = requestors.replace(/(\s)/g, '').split(',');
-		}
+        if (typeof raw !== 'string' || raw.length === 0) {
+            $('#tab-treeview div').html('<% loc("There is no requestor selected.") %>');
+            return;
+        }
 
-		if (typeof requestors != 'undefined') {
-			if (requestors.length > 0) {
-				window.display_loading();
-				data = {
-					"method":"cmdb.workstation_components",
-					"params":{
-						"session":{
-							"username":api_user,
-							"password":api_password,
-							"language":api_lang,
-							"mandator":api_mandator},
-						"filter":{
-							"emails":requestors}},
-					"id":"1",
-					"jsonrpc":"2.0"};
+        requestors = raw.replace(/(\s)/g, '').split(',');
 
-				idoit_ajax(data, function(response) {
-					// First we check for errors.
-					window.remove_loading();
+        if (requestors.length > 0) {
+            window.display_loading();
+            data = {
+                "method":"cmdb.workstation_components",
+                "params":{
+                    "session":{
+                        "username":api_user,
+                        "password":api_password,
+                        "language":api_lang,
+                        "mandator":api_mandator},
+                    "filter":{
+                        "emails":requestors}},
+                "id":"1",
+                "jsonrpc":"2.0"};
 
-					if (response.error == null) {
-						current_treeview_data = response.result;
-						window.render_treeview();
-					} else {
-                      window.error_notice('<% loc("Error while loading objects by email") %>');
-					}
-                }, true);
-			}
-		}
+            idoit_ajax(data, function(response) {
+                // First we check for errors.
+                window.remove_loading();
+
+                if (response.error == null) {
+                    current_treeview_data = response.result;
+                    window.render_treeview();
+                } else {
+                    window.error_notice('<% loc("Error while loading objects by email") %>');
+                }
+            }, true);
+        }
 	};
 
 

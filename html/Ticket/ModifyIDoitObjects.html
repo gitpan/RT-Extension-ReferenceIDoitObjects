@@ -18,10 +18,15 @@
     <input type="hidden" class="hidden" name="id" value="<% $TicketObj->Id %>" />
     <input type="hidden" id="Requestors" name="Requestory" value="<% $TicketObj->RequestorAddresses %>" />
     <input type="hidden" id="Subject" name="Subject" value="<% $TicketObj->Subject %>" />
-    <&| /Widgets/TitleBox, title => loc('These fields are needed to modify referenced i-doit objects.'), class=>'ticket-info-basics' &>
+
+    <div style="display: none;">
+    <&| /Widgets/TitleBox, title => loc('These fields are needed to modify referenced i-doit objects.'), class => 'ticket-info-basics' &>
         <& Elements/EditCustomFields, TicketObj => $TicketObj &>
     </&>
+    </div>
+
     <br />
+
     <&| /Widgets/TitleBox,title => loc('Modify referenced i-doit objects for ticket #[_1]', $TicketObj->Id), class=> 'ticket-info-basic' &>
         <& Elements/EditIDoitObjects, TicketObj => $TicketObj &>
     </&>

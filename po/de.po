@@ -82,9 +82,6 @@ msgstr "Fehler beim Laden von Objekten anhand von E-Mail-Adressen"
 msgid "Error while loading pre-selecting objects"
 msgstr "Fehler beim Laden vorselektierter Objekte"
 
-msgid "show installed software"
-msgstr "installierte Software anzeigen"
-
 msgid "Error while loading relation objects"
 msgstr "Fehler beim Laden von Beziehungsobjekten"
 
@@ -111,3 +108,9 @@ msgstr "Fehler beim Erstellen eines Logbuch-Eintrags in i-doit"
 
 msgid "There is no requestor selected."
 msgstr "Es ist kein Klient ausgewählt."
+
+msgid "Unknown"
+msgstr "Unbekannt"
+
+msgid "Expand menu tree"
+msgstr "Menübaum ausklappen"

@@ -1,39 +1,25 @@
 %# RT::Extension::ReferenceIDoitObjects
 %#
-%# Copyright 2011-12 synetics GmbH, http://i-doit.org/
+%# Copyright (C) 2011-14 synetics GmbH, <http://i-doit.org/>
 %#
-%# This program is free software; you can redistribute it and/or modify it under
-%# the same terms as Perl itself.
+%# This program is free software: you can redistribute it and/or modify
+%# it under the terms of the GNU Affero General Public License as
+%# published by the Free Software Foundation, either version 3 of the
+%# License, or (at your option) any later version.
+%#
+%# This program is distributed in the hope that it will be useful,
+%# but WITHOUT ANY WARRANTY; without even the implied warranty of
+%# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%# GNU Affero General Public License for more details.
+%#
+%# You should have received a copy of the GNU Affero General Public License
+%# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %#
 %# Request Tracker (RT) is Copyright Best Practical Solutions, LLC.
 
 <&| /Widgets/TitleBox, title => loc('Referenced i-doit objects'), class => 'ticket-info-basics' &>
-    <& /Ticket/Elements/EditIDoitObjects,
-        InTable => 1,
-        fields  => [
-            {
-                name => 'IDoitObject',
-                comp => '/Ticket/Elements/ShowIDoitObjects',
-                args => {
-                    Name => 'IDoitObjectBrowser',
-                    Default => $ARGS{IDoitObjectBrowser},
-                    DefaultValue => 0,
-                    SkipDeleted => 1,
-                    QueueObj => $QueueObj,
-                }
-            }
-        ]
-    &>
+    <& /Ticket/Elements/EditIDoitObjects &>
 </&>
-
-<script type="text/javascript">
-    (function($) {
-        $('form[name="TicketCreate"]').submit(function() {
-            window.log_changed_objects(false);
-            return true;
-        });
-    })(jQuery);
-</script>
 
 <%INIT>
 

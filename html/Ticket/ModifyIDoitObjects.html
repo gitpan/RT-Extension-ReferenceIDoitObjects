@@ -24,7 +24,7 @@
 
 <& /Elements/ListActions, actions => \@results &>
 
-<form name="ModifyReferencedIDoitObjects" method="post" action="ModifyIDoitObjects.html?id=<% $TicketObj->Id %>">
+<form name="ModifyReferencedIDoitObjects" method="post" action="ModifyIDoitObjects.html">
     <input type="hidden" class="hidden" name="id" value="<% $TicketObj->Id %>" />
     <input type="hidden" id="Requestors" name="Requestory" value="<% $TicketObj->RequestorAddresses %>" />
     <input type="hidden" id="Subject" name="Subject" value="<% $TicketObj->Subject %>" />
@@ -42,15 +42,6 @@
     </&>
     <& /Elements/Submit, Name => 'SubmitTicket', Label => loc('Save Changes') &>
 </form>
-
-<script type="text/javascript">
-    (function($) {
-        $('form[name="ModifyReferencedIDoitObjects"]').submit(function() {
-            window.log_changed_objects(true);
-            return true;
-        });
-    })(jQuery);
-</script>
 
 <%INIT>
 my @results;

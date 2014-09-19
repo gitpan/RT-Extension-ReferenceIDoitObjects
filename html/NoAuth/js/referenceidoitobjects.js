@@ -81,7 +81,7 @@ ReferenceIDoitObjects = function (params) {
      *
      * @type {object}
      */
-    this.devicesViewData = {};
+    this.devicesData = {};
 
     /**
      * Is the browser initialized?
@@ -155,13 +155,24 @@ ReferenceIDoitObjects = function (params) {
      *
      * @type {object}
      */
-    this.objectTable = $('#idoitAllObjectsTable').dataTable({
+    this.objectTable = $('#idoitAllObjectsTable').DataTable({
         "bJQueryUI": true,
         "bAutoWidth": false,
         "bLengthChange": false,
         "iDisplayLength": 20,
         "sPaginationType": "full_numbers",
-        "oLanguage": this.dataTableL10N
+        "oLanguage": this.dataTableL10N,
+        "columns": [
+            {"orderable": false},
+            null,
+            null,
+            {"orderable": false}
+        ],
+        // Workaround because of doubled sorting icons in table head:
+        "renderer": {
+            "header": "bootstrap",
+            "pageButton": "jqueryui"
+        }
     });
 
     /**
@@ -169,13 +180,24 @@ ReferenceIDoitObjects = function (params) {
      *
      * @type {object}
      */
-    this.selectedObjectsTable = $('#idoitSelectedObjectsTable').dataTable({
+    this.selectedObjectsTable = $('#idoitSelectedObjectsTable').DataTable({
         "bJQueryUI": true,
         "bAutoWidth": false,
         "bPaginate": false,
         "bLengthChange": false,
-        "bSort": false,
-        "oLanguage": this.dataTableL10N
+        "oLanguage": this.dataTableL10N,
+        "columns": [
+            {"orderable": false},
+            null,
+            null,
+            null,
+            {"orderable": false}
+        ],
+        // Workaround because of doubled sorting icons in table head:
+        "renderer": {
+            "header": "bootstrap",
+            "pageButton": "jqueryui"
+        }
     });
 
     /**
@@ -183,13 +205,27 @@ ReferenceIDoitObjects = function (params) {
      *
      * @type {object}
      */
-    this.devicesTable = $('#idoitDevicesTable').dataTable({
+    this.devicesTable = $('#idoitDevicesTable').DataTable({
         "bJQueryUI": true,
         "bAutoWidth": false,
         "bLengthChange": false,
         "iDisplayLength": 20,
         "sPaginationType": "full_numbers",
-        "oLanguage": this.dataTableL10N
+        "oLanguage": this.dataTableL10N,
+        "columns": [
+            {"orderable": false},
+            null,
+            null,
+            null,
+            null,
+            {"orderable": false},
+            {"orderable": false}
+        ],
+        // Workaround because of doubled sorting icons in table head:
+        "renderer": {
+            "header": "bootstrap",
+            "pageButton": "jqueryui"
+        }
     });
 
     /**
@@ -197,14 +233,31 @@ ReferenceIDoitObjects = function (params) {
      *
      * @type {object}
      */
-    this.installedApplicationTable = $('#idoitInstalledSoftwareTable').dataTable({
+    this.installedApplicationTable = $('#idoitInstalledSoftwareTable').DataTable({
         "bJQueryUI": true,
         "bAutoWidth": false,
         "bLengthChange": false,
         "iDisplayLength": 20,
         "sPaginationType": "full_numbers",
-        "oLanguage": this.dataTableL10N
+        "oLanguage": this.dataTableL10N,
+        "columns": [
+            {"orderable": false},
+            null,
+            null,
+            null,
+            {"orderable": false}
+        ],
+        // Workaround because of doubled sorting icons in table head:
+        "renderer": {
+            "header": "bootstrap",
+            "pageButton": "jqueryui"
+        }
     });
+
+    this.formRTCreate = $('form[name="TicketCreate"]');
+    this.formRTModifyIDoitObjects = $('form[name="ModifyReferencedIDoitObjects"]');
+    this.formRTModifyAll = $('form[name="TicketModifyAll"]');
+    this.formOTRSEdit = $('form[name="compose"]');
 
     /**
      * Make this object available in sub methods:
@@ -237,7 +290,7 @@ ReferenceIDoitObjects = function (params) {
         that.callIDoit(data, function (response) {
             if (response !== null && response.error === undefined) {
                 // Initialize the tabs.
-                that.content.tabs({selected: params.defaultView});
+                that.content.tabs({active: params.defaultView});
 
                 // Check whether the preselection field is filled out.
                 that.loadPreselectedData();
@@ -254,11 +307,15 @@ ReferenceIDoitObjects = function (params) {
                         .appendTo('#idoitObjectTypeSelector');
                 });
 
-                // Load assigned objects by contact
-                that.loadDevices();
-
                 // Trigger the event.
                 that.objectTypeSelector.change();
+
+                // Activate chosen jQuery plugin:
+                $(".chosen-select").chosen({
+                    disable_search_threshold: 10,
+                    no_results_text: params.l10n['Nothing found.'],
+                    width: "264px"
+                });
 
                 that.initialized = true;
             } else {
@@ -275,41 +332,84 @@ ReferenceIDoitObjects = function (params) {
     this.loadCustomerData = function () {
         var customers = [],
             customerList = that.customers.val(),
-            data = {};
+            workplacesInfo = $('#idoitWorkplacesTab div'),
+            devicesInfo = $('#idoitDevicesInfo'),
+            devicesTableWrapper = $('#idoitDevicesTable_wrapper');
 
         if (typeof customerList !== 'string' || customerList.length === 0) {
-            $('#idoitWorkplacesTab div').html(params.l10n['There is no customer selected.']);
+            workplacesInfo.html(params.l10n['There is no customer selected.']);
             $('#idoitDevicesInfo').html(params.l10n['There is no customer selected.']);
+            devicesTableWrapper.hide();
+            that.installedSoftware.hide();
             return;
-        }
+        } //if
+
+        workplacesInfo.html('');
+        devicesInfo.html('');
+        devicesTableWrapper.show();
 
         customers = customerList.replace(/(\s)/g, '').split(',');
 
-        if (typeof customers !== 'undefined') {
-            if (customers.length > 0) {
+        if (typeof customers !== 'undefined' && customers.length > 0) {
                 that.showLoadingSign();
-
-                data = {
-                    "method": "cmdb.workstation_components",
-                    "params": {
-                        "filter": {
-                            "emails": customers
-                        }
-                    }
-                };
-
-                that.callIDoit(data, function (response) {
-                    that.hideLoadingSign();
-
-                    if (response.error === undefined) {
-                        that.workplacesData = response.result;
-                        that.renderWorkplacesView();
-                    } else {
-                        that.showNotice(params.l10n['Error while loading objects by email']);
-                    }
-                }, true);
-            }
+                that.loadWorkplaces(customers);
+                that.loadDevices(customers);
         }
+    };
+
+    /**
+     * Fetches and displays all objects which are assigned in i-doit to the customer.
+     *
+     * @param {array} customers - List of customer e-mail addresses
+     */
+    this.loadWorkplaces = function (customers) {
+        var data = {
+            "method": "cmdb.workstation_components",
+            "params": {
+                "filter": {
+                    "emails": customers
+                }
+            }
+        };
+
+        that.callIDoit(data, function (response) {
+            that.hideLoadingSign();
+
+            if (response.error === undefined) {
+                that.workplacesData = response.result;
+                that.renderWorkplacesView();
+            } else {
+                that.showNotice(params.l10n['Error while loading objects by email']);
+            }
+        }, true);
+    };
+
+    /**
+     * Fetches and displays all objects which are assigned in i-doit to the customer.
+     *
+     * @param {array} customers - List of customer e-mail addresses
+     */
+    this.loadDevices = function (customers) {
+        var data = {
+            "method": "cmdb.contact",
+            "params": {
+                "filter": {
+                    "email": customers[0]
+                },
+                "method": "assigned_objects_by_contact"
+            }
+        };
+
+        that.callIDoit(data, function (response) {
+            that.hideLoadingSign();
+
+            if (response.error === undefined) {
+                that.devicesData = response.result;
+                that.renderDevicesView();
+            } else {
+                that.showNotice(params.l10n['Error while loading objects by email']);
+            }
+        }, true);
     };
 
     /**
@@ -371,21 +471,6 @@ ReferenceIDoitObjects = function (params) {
     };
 
     /**
-     * Will re-initialize the object browser if mandator is changed.
-     */
-    this.changeMandator = function () {
-        var key = that.mandator.val();
-
-        that.removeAllObjects();
-
-        if (key === '') {
-            that.showNotice(params.l10n['Please select an i-doit mandator.']);
-        } else {
-            that.init();
-        }
-    };
-
-    /**
      * Renews the view of workplaces.
      */
     this.renderWorkplacesView = function () {
@@ -401,7 +486,7 @@ ReferenceIDoitObjects = function (params) {
 
         workplaces = $('#idoitWorkplacesTab div.workplaces');
 
-        // We iterate through the first level (email-addresses).
+        // We iterate through the first level (email addresses).
         $.each(that.workplacesData, function (i, e) {
             workplaces.append(
                 '<a href="' + params.url + '?objID=' + i +
@@ -452,12 +537,204 @@ ReferenceIDoitObjects = function (params) {
     };
 
     /**
+     * Renders the view of linked devices.
+     */
+    this.renderDevicesView = function () {
+        var devices = [];
+
+        that.devicesTable
+            .clear()
+            .order([1, 'asc'])
+            .draw();
+
+        if (typeof that.devicesData !== 'object' ||
+            Object.keys(that.devicesData).length === 0 ||
+            that.devicesData.length === 0) {
+            $('#idoitDevicesInfo').html(
+                params.l10n['There are no roles defined for given customer(s).']
+            );
+        } else {
+            $.each(that.devicesData, function (i, e) {
+                var selected = false,
+                    check = '',
+                    link = '',
+                    showSoftware = '';
+
+                if (typeof that.dataStore.data(e.id) !== 'undefined') {
+                    selected = true;
+                }
+
+                check = '<input type="checkbox" value="' + e.id +
+                    '" name="idoitDevicesObject[]" ' + ((selected) ? 'checked="checked"' : '') +
+                    ' />';
+
+                link = '<a href="' + params.url + '?objID=' + e.id + '" target="_blank" title="' +
+                    params.l10n['Go to i-doit'] + '">&raquo; i-doit</a>';
+
+                showSoftware =
+                    '<span class="installed-apps-button"><a href="javascript:void(null);" title="' +
+                    params.l10n['show installed software'] +
+                    '" onclick="referenceIDoitObjects.renderInstalledApplicationTable(' +
+                    e.id + ', \'' + e.title + '\');">&raquo; ' +  params.l10n['Show'] +
+                    '</a></span>';
+
+                devices.push([
+                    check,
+                    e.id,
+                    e.title,
+                    e.type_title,
+                    e.role,
+                    showSoftware,
+                    link
+                ]);
+            });
+
+            that.devicesTable
+                .rows.add(devices)
+                .draw();
+        }
+    };
+
+    /**
+     * Renders the table for installed applications for a specific object.
+     *
+     * @param {int} id - Object identifier
+     * @param {string} title - Object title
+     */
+    this.renderInstalledApplicationTable = function (id, title) {
+        var data = {};
+
+        that.installedApplicationTable
+            .clear()
+            .order([1, 'asc'])
+            .draw();
+
+        if (id === undefined) {
+            that.installedSoftware.hide();
+            return;
+        }
+
+        $('#idoitInstalledSoftwareInfo span').html(
+            '<a href="' + params.url + '?objID=' + id + '" title="' +
+            params.l10n['Go to i-doit'] + '" target="_blank">' + title + '</a>'
+        );
+
+        if (params.installedSoftware === 'objects') {
+            data = {
+                "method": "cmdb.category",
+                "params": {
+                    "objID": id,
+                    "catgID": "C__CATG__APPLICATION"
+                }
+            };
+        } else {
+            data = {
+                "method": "cmdb.objects_by_relation",
+                "params": {
+                    "id": id,
+                    "relation_type": "C__RELATION_TYPE__SOFTWARE"
+                }
+            };
+        }
+
+        that.callIDoit(data, function (response) {
+            var applications = [],
+                assignedApplicationsData = response.result;
+
+            if (response.error === undefined) {
+                that.installedSoftware.show();
+
+                if (params.installedSoftware == 'objects') {
+                    $.each(assignedApplicationsData, function (i, e) {
+                        var selected = false,
+                            check = '',
+                            link = '';
+
+                        if (typeof that.dataStore.data(e.application.id) !== 'undefined') {
+                            selected = true;
+                        }
+
+                        check = '<input type="checkbox" value="' + e.application.id +
+                            '" name="idoitInstalledApplicationsObject[]" ' +
+                            ((selected) ? 'checked="checked"' : '') +
+                            ' onchange="referenceIDoitObjects.checkCHKB(this)" />';
+                        link = '<a href="' + params.url + '?objID=' + e.application.id +
+                            '" target="_blank" title="' + params.l10n['Go to i-doit'] +
+                            '">&raquo; i-doit</a>';
+
+                        applications.push([
+                            check,
+                            e.application.id,
+                            e.application.title,
+                            e.application.type_title,
+                            link
+                        ]);
+                    });
+                } else {
+                    $.each(assignedApplicationsData, function (i, e) {
+                        var check,
+                            selected = false,
+                            link;
+
+                        if (typeof that.dataStore.data(e.data.id) !== 'undefined') {
+                            selected = true;
+                        }
+
+                        check = '<input type="checkbox"  value="' + e.data.id +
+                            '" name="idoitInstalledApplicationsObject[]" ' +
+                            ((selected) ? 'checked="checked"' : '') +
+                            ' onchange="referenceIDoitObjects.checkCHKB(this)" />';
+                        link = '<a href="' + params.url + '?objID=' + e.data.id +
+                            '" target="_blank" title="' + params.l10n['Go to i-doit'] +
+                            '">&raquo; i-doit</a>';
+
+                        applications.push([
+                            check,
+                            e.data.id,
+                            e.data.title,
+                            e.data.related_type_title,
+                            link
+                        ]);
+                    });
+                }
+
+                that.installedApplicationTable
+                    .rows.add(applications)
+                    .draw();
+            } else {
+                that.showNotice(params.l10n['Error while loading objects by email']);
+            }
+        }, true);
+    };
+
+    /**
+     * Renders object location tree. If too long tree will be trimmed.
+     *
+     * @param {array} tree Location tree
+     */
+    this.renderLocationTree = function (tree) {
+        if (tree.length > 0) {
+            // Trim location tree:
+            if (tree.length > 3) {
+                tree = [tree[0], '&hellip;', tree.slice(-1)];
+            }
+
+            return tree.join(' &raquo; ');
+        }
+
+        return '&ndash;';
+    };
+
+    /**
      * Renews the view of all objects.
      */
     this.renderObjectsView = function () {
         var entities = [];
 
-        that.objectTable.fnClearTable();
+        that.objectTable
+            .clear()
+            .order([1, 'asc'])
+            .draw();
 
         $.each(that.objectsData, function (i, e) {
             var selected = false,
@@ -468,7 +745,7 @@ ReferenceIDoitObjects = function (params) {
                 selected = true;
             }
 
-            check = '<input type="checkbox" value="' + e.id + '" name="idoitObjectBrowserObj[]" ' +
+            check = '<input type="checkbox" value="' + e.id + '" name="idoitAllObjectsObject[]" ' +
                 ((selected) ? 'checked="checked"' : '') + ' />';
             link = '<a href="' + params.url + '?objID=' + e.id + '" target="_blank" title="' +
                 params.l10n['Go to i-doit'] + '">&raquo; i-doit</a>';
@@ -476,7 +753,61 @@ ReferenceIDoitObjects = function (params) {
             entities.push([check, e.id, e.title, link]);
         });
 
-        that.objectTable.fnAddData(entities);
+        if (entities.length > 0) {
+            that.objectTable
+                .rows.add(entities)
+                .draw();
+        }
+    };
+
+    /**
+     * Renews view of selected objects. Will be used when adding or removing an object.
+     */
+    this.renderSelectedObjects = function () {
+        var data = [],
+            entities = [],
+            raw;
+
+        that.selectedObjectsTable
+            .clear()
+            .order([1, 'asc'])
+            .draw();
+
+        raw = that.dataStore.data();
+
+        $.each(raw, function (i, e) {
+            var link = '<a href="' + params.url + '?objID=' + i + '" title="' +
+                params.l10n['Go to i-doit'] + '">&raquo; i-doit</a>';
+
+            entities.push([
+                '<a href="javascript:void(null);" class="idoitObjectBrowserRemover" onclick="referenceIDoitObjects.removeObject(' +
+                    i + ')">' + params.l10n['Clear'] + '</a>',
+                i,
+                e.name,
+                e.type,
+                link
+            ]);
+
+            data.push(i);
+        });
+
+        if (entities.length > 0) {
+            that.selectedObjectsTable
+                .rows.add(entities)
+                .draw();
+        }
+
+        switch (params.type) {
+            case 'otrs':
+                // This DynamicField is an input text with a comma-separated list if object
+                // idenfiers:
+                that.objects.val(',' + data.join(',') + ',');
+                break;
+            case 'rt':
+                // This CustomField is a textarea with one object identifer per line:
+                that.objects.val(data.join("\n"));
+                break;
+        }
     };
 
     /**
@@ -490,8 +821,10 @@ ReferenceIDoitObjects = function (params) {
         that.renderSelectedObjects();
 
         // Instead of rendering the lists again we can do something like this:
-        $('input[name="idoitObjectBrowserObj[]"][value="' + id + '"]').attr('checked', false);
-        $('input[name="idoitWorkplacesObject[]"][value="' + id + '"]').attr('checked', false);
+        $('input[name="idoitAllObjectsObject[]"][value="' + id + '"]').prop('checked', false);
+        $('input[name="idoitWorkplacesObject[]"][value="' + id + '"]').prop('checked', false);
+        $('input[name="idoitDevicesObject[]"][value="' + id + '"]').prop('checked', false);
+        $('input[name="idoitInstalledApplicationsObject[]"][value="' + id + '"]').prop('checked', false);
     };
 
     /**
@@ -525,51 +858,10 @@ ReferenceIDoitObjects = function (params) {
         that.renderSelectedObjects();
 
         // Instead of re-rendering the tables this is faster:
-        $('input[name="idoitObjectBrowserObj[]"][value="' + id + '"]').attr('checked', 'checked');
-        $('input[name="idoitWorkplacesObject[]"][value="' + id + '"]').attr('checked', 'checked');
-    };
-
-    /**
-     * Renews view of selected objects. Will be used when adding or removing an object.
-     */
-    this.renderSelectedObjects = function () {
-        var data = [],
-            entities = [],
-            raw;
-
-        that.selectedObjectsTable.fnClearTable();
-
-        raw = that.dataStore.data();
-
-        $.each(raw, function (i, e) {
-            var link = '<a href="' + params.url + '?objID=' + i + '" title="' +
-                params.l10n['Go to i-doit'] + '">&raquo; i-doit</a>';
-
-            entities.push([
-                '<a href="#" class="idoitObjectBrowserRemover" onclick="referenceIDoitObjects.removeObject(' +
-                    i + ')">' + params.l10n['Delete'] + '</a>',
-                i,
-                e.name,
-                e.type,
-                link
-            ]);
-
-            data.push(i);
-        });
-
-        that.selectedObjectsTable.fnAddData(entities);
-
-        switch (params.type) {
-            case 'otrs':
-                // This DynamicField is an input text with a comma-separated list if object
-                // idenfiers:
-                that.objects.val(',' + data.join(',') + ',');
-                break;
-            case 'rt':
-                // This CustomField is a textarea with one object identifer per line:
-                that.objects.val(data.join("\n"));
-                break;
-        }
+        $('input[name="idoitAllObjectsObject[]"][value="' + id + '"]').prop('checked', true);
+        $('input[name="idoitWorkplacesObject[]"][value="' + id + '"]').prop('checked', true);
+        $('input[name="idoitDevicesObject[]"][value="' + id + '"]').prop('checked', true);
+        $('input[name="idoitInstalledApplicationsObject[]"][value="' + id + '"]').prop('checked', true);
     };
 
     /**
@@ -652,7 +944,15 @@ ReferenceIDoitObjects = function (params) {
         data.jsonrpc = '2.0';
         data.params = data.params || {};
         data.params.language = params.language;
-        data.params.apikey = params.mandatorKeys[that.mandator.val()];
+
+        switch (params.type) {
+            case 'otrs':
+                data.params.apikey = that.mandator.val();
+                break;
+            case 'rt':
+                data.params.apikey = params.mandatorKeys[that.mandator.val()];
+                break;
+        }
 
         $.ajax({
             "url": params.api,
@@ -692,219 +992,6 @@ ReferenceIDoitObjects = function (params) {
     };
 
     /**
-     * Fetches and displays all objects which are assigned in i-doit to the customer.
-     */
-    this.loadDevices = function () {
-        var costumerList = that.customers.val(),
-            customers = [],
-            data = {};
-
-        if (typeof customerList !== 'string' || customerList.length === 0) {
-            $('#idoitWorkplacesTab div').html(params.l10n['There is no customer selected.']);
-            return;
-        }
-
-        customers = customerList.replace(/(\s)/g, '').split(',');
-
-        if (typeof customers !== 'undefined') {
-            if (customers.length > 0) {
-                data = {
-                    "method": "cmdb.contact",
-                    "params": {
-                        "filter": {
-                            "email": customers[0]
-                        },
-                        "call": "assigned_objects_by_contact"
-                    }
-                };
-
-                that.callIDoit(data, function (response) {
-                    if (response.error === undefined) {
-                        that.devicesViewData = response.result;
-                        that.renderDevicesView();
-                    } else {
-                        that.showNotice(params.l10n['Error while loading objects by email']);
-                    }
-                }, true);
-            }
-        }
-    };
-
-    /**
-     * Renders the view of linked devices.
-     */
-    this.renderDevicesView = function () {
-        var devices = [];
-
-        that.devicesTable.fnClearTable();
-
-        if (typeof that.devicesViewData === 'undefined' ||
-            Object.keys(that.devicesViewData).length === 0) {
-            $('#idoitDevicesTab').html(
-                params.l10n['There are no roles defined for given customer(s).']
-            );
-        } else {
-            $.each(that.devicesViewData, function (i, e) {
-                var selected = false,
-                    check = '',
-                    link = '',
-                    showSoftware = '';
-
-                if (typeof that.dataStore.data(e.id) !== 'undefined') {
-                    selected = true;
-                }
-
-                check = '<input type="checkbox" value="' + e.id +
-                    '" name="idoitObjectBrowserObj[]" ' + ((selected) ? 'checked="checked"' : '') +
-                    ' />';
-                link = '<a href="' + params.url + '?objID=' + e.id + '" target="_blank" title="' +
-                    params.l10n['Go to i-doit'] + '">&raquo; i-doit</a>';
-                showSoftware =
-                    '<span class="installed-apps-button"><a href="#" onclick="referenceIDoitObjects.renderInstalledApplicationTable(' +
-                    e.id + ', \'' + e.title + '\');">' + params.l10n['show installed software'] +
-                    '</a></span>';
-
-                devices.push([
-                    check,
-                    e.id,
-                    e.title,
-                    e.type_title,
-                    e.sysid,
-                    e.role,
-                    e.primary,
-                    showSoftware,
-                    link
-                ]);
-            });
-
-            that.devicesTable.fnAddData(devices);
-        }
-    };
-
-    /**
-     * Renders the table for installed applications for a specific object.
-     *
-     * @param {int} ident - Object identifier
-     * @param {string} linkedTitle - Object title
-     */
-    this.renderInstalledApplicationTable = function (ident, linkedTitle) {
-        var data = {};
-
-        that.installedApplicationTable.fnClearTable();
-
-        if (ident === undefined) {
-            that.installedSoftware.hide();
-            return;
-        }
-
-        $('#idoitInstalledSoftwareInfo span').html(linkedTitle);
-
-        if (params.installedSoftware === 'objects') {
-            data = {
-                "method": "cmdb.category",
-                "params": {
-                    "objID": ident,
-                    "catgID": "C__CATG__APPLICATION"
-                }
-            };
-        } else {
-            data = {
-                "method": "cmdb.objects_by_relation",
-                "params": {
-                    "id": ident,
-                    "relation_type": "C__RELATION_TYPE__SOFTWARE"
-                }
-            };
-        }
-
-        that.callIDoit(data, function (response) {
-            var applications = [],
-                assignedApplicationsData = response.result;
-
-            if (response.error === undefined) {
-                that.installedSoftware.show();
-                that.installedApplicationTable.fnClearTable();
-
-                if(params.installedSoftware == 'objects') {
-                    $.each(assignedApplicationsData, function (i, e) {
-                        var selected = false,
-                            check = '',
-                            link = '';
-
-                        if (typeof that.dataStore.data(e.application.id) !== 'undefined') {
-                            selected = true;
-                        }
-
-                        check = '<input type="checkbox" value="' + e.application.id +
-                            '" name="idoitObjectBrowserObj[]" ' +
-                            ((selected) ? 'checked="checked"' : '') +
-                            ' onchange="referenceIDoitObjects.checkCHKB(this)" />';
-                        link = '<a href="' + params.url + '?objID=' + e.application.id +
-                            '" target="_blank" title="' + params.l10n['Go to i-doit'] +
-                            '">&raquo; i-doit</a>';
-
-                        applications.push([
-                            check,
-                            e.application.id,
-                            e.application.title,
-                            e.application.type_title,
-                            link
-                        ]);
-                    });
-                } else {
-                    $.each(assignedApplicationsData, function (i, e) {
-                        var check,
-                            selected = false,
-                            link;
-
-                        if (typeof that.dataStore.data(e.data.id) !== 'undefined') {
-                            selected = true;
-                        }
-
-                        check = '<input type="checkbox"  value="' + e.data.id +
-                            '" name="idoitObjectBrowserObj[]" ' +
-                            ((selected) ? 'checked="checked"' : '') +
-                            ' onchange="referenceIDoitObjects.checkCHKB(this)" />';
-                        link = '<a href="' + params.url + '?objID=' + e.data.id +
-                            '" target="_blank" title="' + params.l10n['Go to i-doit'] +
-                            '">&raquo; i-doit</a>';
-
-                        applications.push([
-                            check,
-                            e.data.id,
-                            e.data.title,
-                            e.data.related_type_title,
-                            link
-                        ]);
-                    });
-                }
-
-                that.installedApplicationTable.fnAddData(applications);
-            } else {
-                that.showNotice(params.l10n['Error while loading objects by email']);
-            }
-        }, true);
-    };
-
-    /**
-     * Renders object location tree. If too long tree will be trimmed.
-     *
-     * @param {array} tree Location tree
-     */
-    this.renderLocationTree = function (tree) {
-        if (tree.length > 0) {
-            // Trim location tree:
-            if (tree.length > 3) {
-                tree = [tree[0], '&hellip;', tree.slice(-1)];
-            }
-
-            return tree.join(' &raquo; ');
-        }
-
-        return '&ndash;';
-    };
-
-    /**
      * Stores the added IDs from the object view.
      *
      * @param {object} ele - Element
@@ -923,6 +1010,21 @@ ReferenceIDoitObjects = function (params) {
         }
 
         that.renderSelectedObjects();
+    };
+
+    /**
+     * Will re-initialize the object browser if mandator is changed.
+     */
+    this.changeMandator = function () {
+        var key = that.mandator.val();
+
+        that.removeAllObjects();
+
+        if (key === '') {
+            that.showNotice(params.l10n['Please select an i-doit mandator.']);
+        } else {
+            that.init();
+        }
     };
 
     /***********************************************************************************************
@@ -960,25 +1062,37 @@ ReferenceIDoitObjects = function (params) {
     /**
      * Will add/remove objects from the selection list if object's checkbox is checked/unchecked.
      */
-    that.content.on('change', 'input[name="idoitObjectBrowserObj[]"]', function () {
-        var name,
+    that.content.on('change', 'input[name="idoitAllObjectsObject[]"]', function () {
+        var id = $(this).val(),
+            name,
             type;
 
-        if ($(this).is(':checked')) {
+        if (this.checked) {
             name = $(this).closest('tr').find('td:eq(2)').text();
             type = $('#idoitObjectTypeSelector option:selected').text();
 
-            that.addObject($(this).val(), name, type);
+            that.addObject(id, name, type);
         } else {
-            that.removeObject($(this).val());
+            that.removeObject(id);
         }
     });
 
     /**
-     * Selects all objects from object view.
+     * Will add/remove objects from the selection list if object's checkbox is checked/unchecked.
      */
-    $('#idoitCheckAllObjects').click(function () {
-        $('input', that.objectTable.fnGetNodes()).attr('checked',this.checked).change();
+    that.content.on('change', 'input[name="idoitDevicesObject[]"], input[name="idoitInstalledApplicationsObject[]"]', function () {
+        var id = $(this).val(),
+            name,
+            type;
+
+        if (this.checked) {
+            name = $(this).closest('tr').find('td:eq(2)').text();
+            type = $(this).closest('tr').find('td:eq(3)').text();
+
+            that.addObject(id, name, type);
+        } else {
+            that.removeObject(id);
+        }
     });
 
     /**
@@ -988,10 +1102,9 @@ ReferenceIDoitObjects = function (params) {
         var name,
             type;
 
-        if ($(this).attr('checked')) {
+        if (this.checked) {
             name = $(this).next().text();
             type = $(this).next().next().text();
-
             that.addObject($(this).val(), name, type);
         } else {
             that.removeObject($(this).val());
@@ -1051,19 +1164,24 @@ ReferenceIDoitObjects = function (params) {
     });
 
     /**
+     * Will select/unselect all objects' checkboxes in all objects view if checkbox is marked/unmarked.
+     */
+    $('#idoitCheckAllObjects').click(function () {
+        $('input[name="idoitAllObjectsObject[]"]').prop('checked', this.checked).change();
+    });
+
+    /**
      * Will select/unselect all objects' checkboxes in devices view if checkbox is marked/unmarked.
      */
     $('#idoitCheckAllDevices').click(function () {
-        $('input', that.devicesTable.fnGetNodes()).attr('checked',this.checked).change();
+        $('input[name="idoitDevicesObject[]"]').prop('checked', this.checked).change();
     });
 
     /**
      * Will select/unselect all checkboxes of installed applications if checkbox is marked/unmarked.
      */
     $('#idoitCheckAllApps').click(function () {
-        $('input', that.installedApplicationTable.fnGetNodes())
-            .attr('checked',this.checked)
-            .change();
+        $('input[name="idoitInstalledApplicationsObject[]"]').prop('checked', this.checked).change();
     });
 
     /**
@@ -1115,13 +1233,25 @@ ReferenceIDoitObjects = function (params) {
     });
 
     /**
-     * Will submit all changes if form is sent.
-     * @return bool Returns true which is necessary to continue with the POST request.
+     * Identifies the right ticket mode and triggers logbook entries:
      */
-    $(params.form).submit(function () {
-        that.logChangedObjects(true);
-        return true;
-    });
+    if (this.formRTCreate.length > 0) {
+        this.formRTCreate.submit(function (event) {
+            that.logChangedObjects(false);
+        });
+    } else if (this.formRTModifyIDoitObjects.length > 0) {
+        this.formRTModifyIDoitObjects.submit(function (event) {
+            that.logChangedObjects(true);
+        });
+    } else if (this.formRTModifyAll.length > 0) {
+        this.formRTModifyAll.submit(function (event) {
+            that.logChangedObjects(true);
+        });
+    } else if (this.formOTRSEdit.length > 0) {
+        this.formOTRSEdit.submit(function (event) {
+            that.logChangedObjects(true);
+        });
+    } //if
 
     /**
      * Initializes the object browser or displays a message.
